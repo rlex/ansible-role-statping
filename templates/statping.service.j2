@@ -1,0 +1,14 @@
+[Unit]
+Description=Statping Server
+After=network.target
+After=systemd-user-sessions.service
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/local/bin/statping --ip "{{ statping_listen_ip }}" --port {{ statping_listen_port }}
+WorkingDirectory=/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target

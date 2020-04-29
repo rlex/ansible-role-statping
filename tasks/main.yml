@@ -1,0 +1,57 @@
+- name: create statping system group
+  group:
+    name: "{{ statping_system_group }}"
+    system: true
+    state: present
+
+- name: create statping system user
+  user:
+    name: "{{ statping_system_user }}"
+    system: true
+    shell: "/usr/sbin/nologin"
+    group: "{{ statping_system_group }}"
+    createhome: false
+
+- name: "Download statping files"
+  become: false
+  get_url:
+    url: "https://github.com/statping/statping/releases/download/v{{ statping_version }}/statping-linux-amd64.tar.gz"
+    dest: "/tmp/"
+  delegate_to: localhost
+
+- name: "Create temporary directory"
+  become: false
+  file:
+    path: /tmp/statping-{{statping_version}}-linux-amd64
+    state: directory
+  delegate_to: localhost
+
+- name: "Unarchive statping files"
+  become: false
+  unarchive:
+    src: "/tmp/statping-linux-amd64.tar.gz"
+    remote_src: yes
+    dest: /tmp/statping-{{statping_version}}-linux-amd64
+    creates: "/tmp/statping-{{statping_version}}-linux-amd64/statping"
+  delegate_to: localhost
+  check_mode: false
+
+- name: propagate statping binary
+  copy:
+    src: "/tmp/statping-{{statping_version}}-linux-amd64/statping"
+    dest: "/usr/local/bin/statping"
+    mode: 0755
+    owner: "{{ statping_system_user }}"
+    group: "{{ statping_system_group }}"
+  notify:
+    - restart statping
+
+- name: create systemd service unit
+  template:
+    src: statping.service.j2
+    dest: /etc/systemd/system/statping.service
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart statping
